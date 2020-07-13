@@ -1,3 +1,3 @@
-# Auutomation
+# Automation
 
 This repo contains variuos automation scripts for VMware products
