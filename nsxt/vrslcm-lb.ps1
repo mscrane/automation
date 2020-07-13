@@ -1,8 +1,6 @@
-$nsxmanager = "nsx3ma.wy.corp"
-$nsxuser = Read-Host "NSX Manager username"
-$nsxpw = Read-Host -assecurestring "NSX Manager password"
-#$nsxcreds = Get-Credential -Message "Enter NSX Manager Credentials"
+
 $nsxurl = "https://$nsxmanager/policy/api/v1"
+$nsxmanager = "nsxm.corp.local"
 
 #------------------------------------
 
@@ -42,15 +40,17 @@ $WSACertPath = "/infra/certificates/WSA-Certificate" #Path to imported WSA Certi
 #Set PS error preference to stop execution on error
 $ErrorActionPreference = "Stop"
 
-#Manually create basic auth headers to support older versions of PS
+#Get credentials
+$nsxuser = Read-Host "NSX Manager username"
+$nsxpw = Read-Host -assecurestring "NSX Manager password"
+
+#Manually create basic auth header to support older versions of PS
 $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($nsxpw)
 $plaintext = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
 $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($nsxuser):$($plaintext)"))
 $Headers = @{
     Authorization = "Basic $encodedCreds"
 }
-
-
 
 #Workaround for self-signed certificate. PS versions lower than 6 do not have -SKipCertificationCheck option in Invoke-WebRequest
 #This will accept all certs for this session
@@ -82,6 +82,8 @@ $allProtocols = [System.Net.SecurityProtocolType]'Ssl3,Tls,Tls11,Tls12'
 else{
     Write-Host "Powershell version is " $PSVersionTable.PSVersion "using -SkipCertificateCheck option for Invoke-WebRequest"
 }
+
+
 
 
 
