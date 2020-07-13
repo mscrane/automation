@@ -1,8 +1,7 @@
-
+$nsxmanager = "nsx3ma.wy.corp"
 $nsxurl = "https://$nsxmanager/policy/api/v1"
-$nsxmanager = "nsxm.corp.local"
 
-#------------------------------------
+#Load Balancer Variables
 
 $T1GatewayName = "sfo-m01-lb01-t1-gw01" #Dedicated Tier-1 for Load Balancer
 $LBName = "sfo-m01-lb01-t1-gw01"        #Load Balancer Name
