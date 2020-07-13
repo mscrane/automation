@@ -37,28 +37,10 @@ $VRAPoolMemberName1 = "xreg-vra01a" #VRA pool member 1 Name
 $VRAPoolMemberName2 = "xreg-vra01b" #VRA pool member 2 Name
 $VRAPoolMemberName3 = "xreg-vra01c" #VRA pool member 3 Name
 
-$WSACertPath = "/infra/certificates/WSA-Test" #Path to imported WSA Certificate in NSX-T
+$WSACertPath = "/infra/certificates/WSA-Certificate" #Path to imported WSA Certificate in NSX-T
 
-$WSACertificate = "-----BEGIN CERTIFICATE REQUEST-----
-MIIC+zCCAeMCAQAwbjELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAkNPMRUwEwYDVQQH
-EwxGb3J0IENvbGxpbnMxFzAVBgNVBAoTDldleWxhbmQgWXV0YW5pMQwwCgYDVQQL
-EwNMYWIxFDASBgNVBAMTC3dzYS53eS5jb3JwMIIBIjANBgkqhkiG9w0BAQEFAAOC
-AQ8AMIIBCgKCAQEAz1HYJrr4tehF4aMkzwmnAlHRgCUta+q5YKng0sLFFqAlaaSF
-6Azhc5bax6nqt999uWsHOwA4ctCRXkkd2ghPmBrufYuiUktuyIRzk+wZjVip8120
-udU+Km3WKGrolS2yy0o/asT7b1FujBHBtOG5r0Qw9rEWFvlJUidnGgzMX2OHpMAh
-2obqWSJL8mSfVoNFUtPLgcpkz4nYoxnYFq2TRlcefENnEetmg0NxkQBEfeEmXln9
-eqhSv7tNX/XWz4JE0dYku+U07Eku4sB160Zy6QMi7UrHJMUPELi5eYb6ZD6E2rxa
-neX/VUjlt8FuKOwx7w0alVWg0aQy8LirCi3AdwIDAQABoEgwRgYJKoZIhvcNAQkO
-MTkwNzAJBgNVHRMEAjAAMAsGA1UdDwQEAwIEsDAdBgNVHSUEFjAUBggrBgEFBQcD
-AQYIKwYBBQUHAwIwDQYJKoZIhvcNAQELBQADggEBAAqPEH5AcVjTouy/GZ+2Ak4N
-lMuW+yXhsKvdgHF4MWKdjrY3LXJEQnvZZQ4OyqwS/Y23ZZx8IOz47OLw0llZNb1E
-+HxFoofQgfQxQKnPlSIHfKR6wjXM7ivgczM1VWtmRGf5MpXdBCBfUFm8/GKJIwXr
-JTWN0/Tf+X4jPJhEq4hgZnvLHawspiFc1ATh66HVNdnaEN7yGQ1WNK822HHxBMOh
-OYD/xhg+YtxIV8cM5Jf089OI9lBMiDmbGhVyveK8W98w/q9+jp31GVl/KgMmomDi
-gSBZq1/6y+0WRjoxqDlkUpxGlYNkKsONRcuyMlRNfdE3IFEMxKt+p9FbJdyn1io=
------END CERTIFICATE REQUEST-----
-"
-
+#Set PS error preference to stop execution on error
+$ErrorActionPreference = "Stop"
 
 #Manually create basic auth headers to support older versions of PS
 $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($nsxpw)
@@ -114,12 +96,12 @@ function RESTNSXCall{
      try{
         if ($bCertWorkaround)
         {
-            $response = Invoke-WebRequest -Uri $uri -Headers $Headers -Method $method -Body $body -ContentType "application/json"
+            $response = Invoke-WebRequest -Uri $uri -Headers $Headers -Method $method -Body $body -ContentType "application/json" -ErrorAction Stop
             
         
         }
         else {
-            $response = Invoke-WebRequest -Uri $uri -Headers $Headers -Method $method -Body $body -ContentType "application/json" -SkipCertificateCheck
+            $response = Invoke-WebRequest -Uri $uri -Headers $Headers -Method $method -Body $body -ContentType "application/json" -SkipCertificateCheck  -ErrorAction Stop
         }
         Write-Host "Status: " -NoNewline
         if(($response.StatusCode -eq 200) -or ($response.StatusCode -eq 201))
@@ -130,9 +112,16 @@ function RESTNSXCall{
             Write-Host $response.StatusCode -ForegroundColor red
         }
     }
-    catch [System.Net.WebRequest]{
+    catch [System.Net.WebException]{
+        $res = $_.Exception.Response.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($res)
+        $reader.BaseStream.Position = 0
+        $reader.DiscardBufferedData()
+    
+        $responseBody = $reader.ReadToEnd()
 
-    }
+        Write-Error "Server response: $responseBody"
+}
 }
 
 
