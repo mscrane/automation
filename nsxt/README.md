@@ -6,7 +6,7 @@ This Powershell script will create the dedicated load balancer and all monitors,
 ## Prerequisites:
 
 1) A dedicated Tier 1 Gateway created in NSX-T
-2) A workspace One Access certificate imported into NSX-T manager
+2) A Workspace One Access certificate imported into NSX-T manager
 
 ## Usage:
 
