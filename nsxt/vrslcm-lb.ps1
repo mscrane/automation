@@ -1,4 +1,4 @@
-$nsxmanager = "nsx3ma.wy.corp"
+$nsxmanager = "nsxm.corp.local"
 $nsxurl = "https://$nsxmanager/policy/api/v1"
 
 #Load Balancer Variables
@@ -34,7 +34,7 @@ $VRAPoolMemberName1 = "xreg-vra01a" #VRA pool member 1 Name
 $VRAPoolMemberName2 = "xreg-vra01b" #VRA pool member 2 Name
 $VRAPoolMemberName3 = "xreg-vra01c" #VRA pool member 3 Name
 
-$WSACertPath = "/infra/certificates/WSA-Certificate" #Path to imported WSA Certificate in NSX-T
+$WSACertPath = "/infra/certificates/xreg-wsa01-certificate" #Path to imported WSA Certificate in NSX-T
 
 #Set PS error preference to stop execution on error
 $ErrorActionPreference = "Stop"
@@ -151,6 +151,10 @@ $Body = @"
     "response_status_codes": [
       200
     ],
+    "server_ssl_profile_binding": {
+        "ssl_profile_path": "/infra/lb-server-ssl-profiles/default-balanced-server-ssl-profile",
+        "client_certificate_path": "$WSACertPath"
+      },
     "response_body": "ok",
     "resource_type": "LBHttpsMonitorProfile",
     "display_name": "wsa-https-monitor",
@@ -170,12 +174,13 @@ RESTNSXCall -uri $nsxurl/infra/lb-monitor-profiles/wsa-https-monitor -Method Pat
 #Create WS LB Pool
 $Body = @"
 {
+    "description": "Cross-Region Workspace ONE Access Server Pool",
 	"active_monitor_paths":[
 		"/infra/lb-monitor-profiles/wsa-https-monitor"],
     "algorithm": "LEAST_CONNECTION",
     "snat_translation": {
 		"type": "LBSnatAutoMap"
-	},
+    },
 	"members": [
         {
             "display_name": "$WSAPoolMemberName1",
@@ -211,7 +216,9 @@ $Body = @"
     "request_header_size": "1024",
     "response_header_size": "4096",
     "response_timeout": "60",
-    "http_redirect_to_https": "False"
+    "http_redirect_to_https": "False",
+    "idle_timeout": 3600,
+    "x_forwarded_for":"INSERT"
 }
 "@
 
@@ -226,7 +233,8 @@ $Body = @"
     "request_header_size": "1024",
     "response_header_size": "4096",
     "response_timeout": "60",
-    "http_redirect_to_https": "True"
+    "http_redirect_to_https": "True",
+    "idle_timeout": 3600
 }
 "@
 
@@ -246,16 +254,17 @@ $Body = @"
 "@
 
 Write-Host "Creating WSA Persistence Profile......." -NoNewLine
-RESTNSXCall -uri $nsxurl/infra/lb-persistence-profiles/wsa-persistence-profile -Method Patch -Body $Body -credentials $nsxcreds
+RESTNSXCall -uri $nsxurl/infra/lb-persistence-profiles/wsa-cookie-persistence-profile -Method Patch -Body $Body -credentials $nsxcreds
 
 #Create WSA Virtual Servers
 $Body = @"
 {
     "resource_type": "LBVirtualServer",
+    "description": "Cross-Regin Workspace ONE Access Cluster UI",
 	"ip_address":"$WSAVIP",
 	"ports": ["443"],
     "application_profile_path": "/infra/lb-app-profiles/wsa-http-app-profile",
-    "lb_persistence_profile_path": "/infra/lb-persistence-profiles/wsa-persistence-profile",
+    "lb_persistence_profile_path": "/infra/lb-persistence-profiles/wsa-cookie-persistence-profile",
     "lb_service_path": "/infra/lb-services/$LBName",
     "pool_path": "/infra/lb-pools/wsa-server-pool",
     "client_ssl_profile_binding": {
@@ -263,6 +272,10 @@ $Body = @"
         "default_certificate_path": "$WSACertPath",
         "client_auth": "IGNORE",
         "certificate_chain_depth": 3
+      },
+      "server_ssl_profile_binding": {
+        "ssl_profile_path": "/infra/lb-server-ssl-profiles/default-balanced-server-ssl-profile",
+        "client_certificate_path": "$WSACertPath"
       },
     "rules": [
     {
@@ -469,6 +482,7 @@ RESTNSXCall -uri $nsxurl/infra/lb-monitor-profiles/vra-http-monitor -Method Patc
 #Create vRA LB Pool
 $Body = @"
 {
+    "description": "vRealize Automation Server Pool",
 	"active_monitor_paths":[
 		"/infra/lb-monitor-profiles/vra-http-monitor"],
     "algorithm": "LEAST_CONNECTION",
